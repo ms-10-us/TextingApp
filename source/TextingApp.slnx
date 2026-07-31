@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="MainMicroService.csproj" />
+  <Project Path="UserMicroService/UserMicroService.csproj" />
+</Solution>
