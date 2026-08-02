@@ -16,12 +16,13 @@
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7118;http://localhost:5195"
     },
-    "Container (Dockerfile)": {
+    "MainServiceContainer": {
       "commandName": "Docker",
-      "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "https://localhost:7001;http://localhost:5001",
       "environmentVariables": {
-        "ASPNETCORE_HTTPS_PORTS": "8081",
-        "ASPNETCORE_HTTP_PORTS": "8080"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "publishAllPorts": true,
       "useSSL": true

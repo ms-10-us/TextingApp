@@ -1,4 +1,7 @@
 <Solution>
-  <Project Path="MainMicroService.csproj" />
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
+  <Project Path="MainMicroService/MainMicroService.csproj" />
   <Project Path="UserMicroService/UserMicroService.csproj" />
 </Solution>

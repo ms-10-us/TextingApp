@@ -1,0 +1,52 @@
+name: textingapp
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mainmicroservice:
+    build:
+      context: .
+      dockerfile: MainMicroService/Dockerfile
+    ports:
+      - "7001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+    volumes:
+      - main-data:/data
+
+  usermicroservice:
+    build:
+      context: .
+      dockerfile: UserMicroService/Dockerfile
+    ports:
+      - "7002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__UserDb: "Server=sqlserver,1433;Database=UserDB;User ID=sa;Password=${MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True"
+    volumes:
+      - user-data:/data
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+volumes:
+  main-data:
+  user-data:
+  sql-data:
