@@ -1,8 +1,18 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using UserMicroService.Configuration;
 using UserMicroService.DbContext;
 using UserMicroService.Entities;
+using UserMicroService.Orchestrators;
+using UserMicroService.Repositories;
+using UserMicroService.Security;
 
 namespace UserMicroService
 {
@@ -45,13 +55,67 @@ namespace UserMicroService
                 .AddEntityFrameworkStores<UserDbContext>()
                 .AddDefaultTokenProviders();
 
-            builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
-                .AddIdentityCookies();
+            builder.Services.AddOptions<JwtOptions>()
+                .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+                ?? throw new InvalidOperationException("The 'Jwt' configuration section is not configured");
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(o =>
+                {
+                    o.MapInboundClaims = false;
+                    o.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+                    o.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidIssuer = jwtOptions.Issuer,
+                        ValidateAudience = true,
+                        ValidAudience = jwtOptions.Audience,
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(
+                            Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.FromSeconds(30),
+                        NameClaimType = JwtRegisteredClaimNames.Sub,
+                        RoleClaimType = ClaimTypes.Role
+                    };
+                });
+
+            builder.Services.AddAuthorization();
+
+            builder.Services.AddScoped<IUserRepository, UserRepository>();
+            builder.Services.AddScoped<IUserOrchestrator, UserOrchestrator>();
+
+            builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+            builder.Services.AddScoped<IAuthOrchestrator, AuthOrchestrator>();
+            builder.Services.AddSingleton<ITokenService, JwtTokenService>();
 
             builder.Services.AddControllers();
             builder.Services.AddOpenApi();
 
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(o =>
+            {
+                o.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Description = "Paste the raw JWT. Swagger adds the \"Bearer \" prefix for you."
+                });
+
+                o.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, document, null),
+                        new List<string>()
+                    }
+                }); 
+            });
 
             var app = builder.Build();
 
