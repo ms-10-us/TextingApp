@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/TextingAppUnitTests/">
+    <Project Path="../UnitTests/UserMicroServiceUnitTests/UserMicroServiceUnitTests.csproj" />
+  </Folder>
   <Project Path="docker-compose.dcproj">
     <Build />
   </Project>

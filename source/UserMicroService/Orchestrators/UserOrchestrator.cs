@@ -53,7 +53,7 @@ namespace UserMicroService.Orchestrators
 
         public async Task<OperationResult<UserModel>> GetUserAsync(Guid userId, CancellationToken cancellationToken)
         {
-            UserEntity entity = await _userRepository.GetByIdAsync(userId, cancellationToken);
+            UserEntity? entity = await _userRepository.GetByIdAsync(userId, cancellationToken);
 
             if (entity == null)
             {
