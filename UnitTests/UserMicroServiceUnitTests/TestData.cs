@@ -51,12 +51,39 @@ namespace UserMicroServiceUnitTests
 
         }
 
+        public static AddUserDto AddUserDto 
+            (
+                string email = "ada@example.com",
+                string userName = "ada.lovelace",
+                string displayName = "Ada Lovelace",
+                string password = ValidPassword
+            )
+        {
+            return new AddUserDto
+            {
+                Email = email,
+                Username = userName,
+                DisplayName = displayName,
+                Password = password
+            };
+        }
 
-
-
-
-
-
+        public static AddUserModel AddUserModel
+            (
+                string email = "ada@example.com",
+                string userName = "ada.lovelace",
+                string displayName = "Ada Lovelace",
+                string password = ValidPassword
+            )
+        {
+            return new AddUserModel
+            {
+                Email = email,
+                UserName = userName,
+                DisplayName = displayName,
+                Password = password
+            };
+        }
 
         public static LoginModel LoginModel(string identfier = "ada@example.com", string password = ValidPassword)
         {
