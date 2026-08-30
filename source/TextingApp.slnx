@@ -2,7 +2,9 @@
   <Folder Name="/TextingAppUnitTests/">
     <Project Path="../UnitTests/UserMicroServiceUnitTests/UserMicroServiceUnitTests.csproj" />
   </Folder>
+  <Project Path="BitcoinWalletMicroService/BitcoinWalletMicroService.csproj" Id="0625c6e7-4e93-4c11-a785-a7f7d44d1622" />
   <Project Path="docker-compose.dcproj">
+    <BuildDependency Project="../UnitTests/UserMicroServiceUnitTests/UserMicroServiceUnitTests.csproj" />
     <Build />
   </Project>
   <Project Path="MainMicroService/MainMicroService.csproj" />

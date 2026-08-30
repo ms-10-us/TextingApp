@@ -50,7 +50,25 @@ services:
       sqlserver:
         condition: service_healthy
 
+  bitcoinwalletmicroservice:
+    build:
+      context: .
+      dockerfile: BitcoinWalletMicroService\Dockerfile
+    ports:
+      - "7003:8080"
+    environment:
+      ASPNETCORE_ENVIROMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+
+      Wallet__DbPath: /data/wallets.db
+      Wallet__BusyTimeoutMs: ${WALLET_DB_BUSY_TIMEOUT_MS}
+      Wallet__SecretEntropy: ${WALLET_SECRET_ENTROPY}
+      Wallet_AllowPrivateKeyExport : $ {WALLET_ALLOW_PRIVATE_KEY_EXPORT}
+    volumes:
+      - wallet-data:/data   
+
 volumes:
   main-data:
   user-data:
   sql-data:
+  wallet-data:
