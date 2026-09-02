@@ -5,6 +5,6 @@ namespace BitcoinWalletMicroService.Orchestrator
 {
     public interface IWalletOrchestrator
     {
-        Task<CreateWalletResult> CreateWalletAsync(CreateWalletDto request, CancellationToken ct = default(CancellationToken));
+        Task<CreateWalletResult> CreateWalletAsync(CreateWalletModel model, CancellationToken ct = default(CancellationToken));
     }
 }

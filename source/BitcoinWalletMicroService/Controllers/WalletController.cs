@@ -1,12 +1,14 @@
 ﻿using BitcoinWalletMicroService.Dtos;
+using BitcoinWalletMicroService.Mappings;
 using BitcoinWalletMicroService.Models;
 using BitcoinWalletMicroService.Orchestrator;
-using System.Web.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BitcoinWalletMicroService.Controllers
 {
-    [RoutePrefix("api/wallets")]
-    public class WalletController : ApiController
+    [ApiController]
+    [Route("api/wallets")]
+    public class WalletController : ControllerBase
     {
         private readonly IWalletOrchestrator _orchestrator;
 
@@ -19,9 +21,9 @@ namespace BitcoinWalletMicroService.Controllers
             _orchestrator = orchestrator;
         }
 
-        [HttpPost]
+        [HttpPost("CreateWallet")]
         [Route("")]
-        public async Task<IHttpActionResult> Create(
+        public async Task<IActionResult> Create(
             [FromBody] CreateWalletDto request,
             CancellationToken cancellationToken)
         {
@@ -37,8 +39,9 @@ namespace BitcoinWalletMicroService.Controllers
 
             try
             {
-                CreateWalletResult result = await _orchestrator.CreateWalletAsync(request, cancellationToken);
-                return Created(new Uri(Request.RequestUri!, "/api/wallets/" + result.WalletId), result);
+                CreateWalletModel model = request.ToModel();
+                CreateWalletResult result = await _orchestrator.CreateWalletAsync(model, cancellationToken);
+                return Created($"/api/wallets/{result.WalletId}", result);
             }
             catch (ArgumentException ex)
             {
@@ -49,11 +52,5 @@ namespace BitcoinWalletMicroService.Controllers
                 return Conflict(ex.Message);
             }
         }
-
-        private IHttpActionResult Conflict(string message)
-        {
-            return Content(System.Net.HttpStatusCode.Conflict, message);
-        }
-
     }
 }

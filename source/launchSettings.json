@@ -5,7 +5,8 @@
       "commandVersion": "1.0",
       "serviceActions": {
         "mainmicroservice": "StartDebugging",
-        "usermicroservice": "StartDebugging"
+        "usermicroservice": "StartDebugging",
+        "bitcoinwalletmicroservice": "StartDebugging" 
       },
       "composeLaunchServiceName": "usermicroservice",
       "composeLaunchAction": "LaunchBrowser",

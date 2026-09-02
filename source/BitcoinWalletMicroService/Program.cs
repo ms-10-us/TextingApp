@@ -1,6 +1,5 @@
 using BitcoinWalletMicroService.Dapper;
 using BitcoinWalletMicroService.DBSqlite;
-using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,19 +30,21 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<DbInitializer>().Initialize(schemaPath);
 }
 
-
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Bitcoin Wallet API v1");
+        options.RoutePrefix = "swagger";
+    });
 }
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-
-app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

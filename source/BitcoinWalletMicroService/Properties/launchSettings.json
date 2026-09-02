@@ -3,7 +3,11 @@
     "http": {
       "commandName": "Project",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Wallet__DbPath": "Data/wallets.db",
+        "Wallet__BusyTimeoutMs": "5000",
+        "Wallet__SecretEntropy": "local-dev-only-entropy-not-for-real-funds",
+        "Wallet__AllowPrivateKeyExport": "false"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5201"
@@ -11,7 +15,11 @@
     "https": {
       "commandName": "Project",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Wallet__DbPath": "Data/wallets.db",
+        "Wallet__BusyTimeoutMs": "5000",
+        "Wallet__SecretEntropy": "local-dev-only-entropy-not-for-real-funds",
+        "Wallet__AllowPrivateKeyExport": "false"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "https://localhost:7095;http://localhost:5201"
@@ -20,11 +28,15 @@
       "commandName": "Docker",
       "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}",
       "environmentVariables": {
-        "ASPNETCORE_HTTPS_PORTS": "8081",
-        "ASPNETCORE_HTTP_PORTS": "8080"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HTTP_PORTS": "8080",
+        "Wallet__DbPath": "/data/wallets.db",
+        "Wallet__BusyTimeoutMs": "5000",
+        "Wallet__SecretEntropy": "local-dev-only-entropy-not-for-real-funds",
+        "Wallet__AllowPrivateKeyExport": "false"
       },
-      "publishAllPorts": true,
-      "useSSL": true
+      "useSSL": false,
+      "publishAllPorts": true
     }
   },
   "$schema": "https://json.schemastore.org/launchsettings.json"
