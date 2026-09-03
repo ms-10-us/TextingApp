@@ -1,13 +1,19 @@
-﻿namespace BitcoinWalletMicroService.Models
+﻿namespace BitcoinWalletMicroService.Dtos
 {
-    public class CreateWalletResult
+    public class WalletSummaryDtoResponse
     {
         public string WalletId { get; set; } = string.Empty;
+
         public string Label { get; set; } = string.Empty;
-        public string Mnemonic { get; set; } = string.Empty;
+
+        public string Network { get; set; } = string.Empty;
+
         public string AccountExtendedPublicKey { get; set; } = string.Empty;
+
         public string AccountDerivationPath {  get; set; } = string.Empty;
-        public IEnumerable<DerivedKeyResult> Addresses { get; set; } = Array.Empty<DerivedKeyResult>();
+
+        public int AddressCount { get; set; }
+
         public DateTime CreatedUtc { get; set; }
     }
 }

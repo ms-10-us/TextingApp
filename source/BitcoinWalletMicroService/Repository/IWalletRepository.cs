@@ -17,5 +17,15 @@ namespace BitcoinWalletMicroService.Repository
             IDbTransaction transaction = null,
             CancellationToken ct = default(CancellationToken));
 
+        Task<IEnumerable<WalletSummaryEntity>> GetWalletSummariesAsync(CancellationToken ct = default(CancellationToken));
+
+        Task<WalletEntity> GetWalletByIdAsync(string walletId,  CancellationToken ct = default(CancellationToken));
+
+        Task<IEnumerable<DerivedKeyEntity>> GetDerivedKeysAsync(
+            string walletId, 
+            bool? isChange, 
+            CancellationToken ct = default(CancellationToken));
+
+        Task<bool> DeleteWalletAsync(string walletId, CancellationToken ct = default(CancellationToken));
     }
 }

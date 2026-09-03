@@ -29,7 +29,7 @@ namespace BitcoinWalletMicroService.Utilities
 
                 throw new InvalidOperationException(
                     $"Embedded resource '{ResourceName}' was not found. Confirm " +
-                    "Utilities\\Wordlists\\english.txt has Build Action = Embedded Resource. " +
+                    "RequiredFiles\\english.txt has Build Action = Embedded Resource. " +
                     $"Resources present: [{available}]");
             }
 

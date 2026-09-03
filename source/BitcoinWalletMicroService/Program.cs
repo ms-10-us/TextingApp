@@ -1,5 +1,8 @@
 using BitcoinWalletMicroService.Dapper;
 using BitcoinWalletMicroService.DBSqlite;
+using BitcoinWalletMicroService.Orchestrator;
+using BitcoinWalletMicroService.Repository;
+using BitcoinWalletMicroService.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +23,18 @@ WalletDbOptions walletDbOptions = new WalletDbOptions
 builder.Services.AddSingleton(walletDbOptions);
 builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
 builder.Services.AddSingleton<DbInitializer>();
+
+builder.Services.AddScoped<IWalletOrchestrator, WalletOrchestrator>();
+builder.Services.AddScoped<IMnemonicService, Bip39MnemonicService>();
+builder.Services.AddScoped<IKeyDerivationService, Bip32KeyDerivationService>();
+
+string secretEntropy = builder.Configuration["Wallet:SecretEntropy"]
+    ?? throw new InvalidOperationException(
+        "Wallet:SecretEntropy is not configured. Set WALLET_SECRET_ENTROPY in .env, " +
+        "or Wallet__SecretEntropy in the environment / launchSettings.");
+builder.Services.AddScoped<ISercretProtector>(_ => new AesGcmSecretProtector(secretEntropy));
+
+builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 
 var app = builder.Build();
 

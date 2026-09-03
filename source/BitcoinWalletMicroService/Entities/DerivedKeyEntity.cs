@@ -6,7 +6,7 @@
 
         public required string WalletId { get; set; }
 
-        public required int IsChange { get; set; }
+        public required bool IsChange { get; set; }
 
         public required int AddressIndex {  get; set; }
 
@@ -16,6 +16,8 @@
 
         public required string Address {  get; set; }
 
-        public required DateTime CreatedUtc { get; set; }
+        public string? PrivateKeyWif { get; set; }
+
+        public DateTime CreatedUtc { get; set; }
     }
 }

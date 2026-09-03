@@ -4,6 +4,7 @@ using BitcoinWalletMicroService.Mappings;
 using BitcoinWalletMicroService.Models;
 using BitcoinWalletMicroService.Repository;
 using BitcoinWalletMicroService.Utilities;
+using System.Collections;
 
 namespace BitcoinWalletMicroService.Orchestrator
 {
@@ -68,6 +69,101 @@ namespace BitcoinWalletMicroService.Orchestrator
                 ct);
         }
 
+        public Task<CreateWalletResult> ImportWalletAsync(
+            ImportWalletModel model, 
+            CancellationToken ct = default(CancellationToken))
+        {
+            if (model == null)
+            {
+                throw new ArgumentNullException("request");
+            }
+            ValidateLabel(model.Label);
+
+            if (string.IsNullOrWhiteSpace(model.Mnemonic))
+            {
+                throw new ArgumentException("Mnemonic is required.", "request");
+            }
+
+            if (!_mnemonicService.IsValid(model.Mnemonic))
+            {
+                throw new ArgumentException("Mnemonic failed BIP39 checksum validation.", "request");
+            }
+
+            return PersistWalletAsync(
+                model.Label,
+                model.Mnemonic,
+                model.Passphrase,
+                model.Network,
+                model.AddressType,
+                model.InitalAddressCount,
+                ct);
+        }
+
+        public async Task<IEnumerable<WalletSummary>> GetWalletsAsync(CancellationToken ct = default(CancellationToken))
+        {   
+            IEnumerable<WalletSummaryEntity> entity = await _repository.GetWalletSummariesAsync(ct).ConfigureAwait(false);
+            List<WalletSummary> result = new List<WalletSummary>();
+            foreach(WalletSummaryEntity entityItem in entity)
+            {
+                result.Add(entityItem.ToModel());
+            }
+
+            return result;
+        }
+
+        public async Task<WalletSummary> GetWalletAsync(string walletId, CancellationToken ct = default(CancellationToken))
+        {
+
+            WalletEntity wallet = await _repository.GetWalletByIdAsync(walletId).ConfigureAwait(false);
+            if (wallet == null)
+            {
+                return null;
+            }
+
+            IEnumerable<DerivedKeyEntity> keys = await _repository.GetDerivedKeysAsync(walletId, null, ct).ConfigureAwait(false);
+
+            return new WalletSummary
+            {
+                WalletId = wallet.Id,
+                Label = wallet.Label,
+                Network = wallet.Network,
+                AccountExtendedPublicKey = wallet.AccountExtendedPublicKey,
+                AccountDerivationPath = wallet.AccountDerivationPath,
+                AddressCount = keys.Count(),
+                CreatedUtc = wallet.CreatedUtc
+            };
+        }
+
+        public async Task<IEnumerable<DerivedKeyResult>> GetAddressesAsync(
+            string walletId,
+            bool? isChange = null,
+            CancellationToken ct = default(CancellationToken))
+        {
+            IEnumerable<DerivedKeyEntity> keys = await _repository.GetDerivedKeysAsync(walletId, isChange, ct).ConfigureAwait(false);
+            keys.Select(k => new DerivedKeyEntity
+            {
+                WalletId = walletId,
+                AddressIndex = k.AddressIndex,
+                IsChange = k.IsChange == true,
+                DerivationPath = k.DerivationPath,
+                PublicKeyHex = k.PublicKeyHex,
+                Address = k.Address,
+            }).ToList();
+
+            List<DerivedKeyResult> result = new List<DerivedKeyResult>();
+            foreach(DerivedKeyEntity key in keys)
+            {
+                result.Add(key.ToModel());
+            }
+
+            return result;
+        }
+
+        public async Task<bool> DeleteWalletAsync(string walletId, CancellationToken ct)
+        {
+            return await _repository.DeleteWalletAsync(walletId, ct).ConfigureAwait(false);
+        }
+
         private static void ValidateLabel(string label)
         {
             if (string.IsNullOrWhiteSpace(label))
@@ -94,8 +190,7 @@ namespace BitcoinWalletMicroService.Orchestrator
 
             string fingerprint = _mnemonicService.Fingerprint(mnemonic, passphrase);
 
-            //GetWalletByFingerprintAsync from repository;
-            WalletEntity existing = await _repository
+            WalletEntity? existing = await _repository
                 .GetWalletByFingerprintAsync(fingerprint, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -111,7 +206,7 @@ namespace BitcoinWalletMicroService.Orchestrator
 
                 AccountKeys account = _keyDerivationService.DeriveAccount(seed, network, addressType, 0);
 
-                IReadOnlyList<DerivedKeyResult> addresses = _keyDerivationService.DerivePublicKeys(
+                IEnumerable<DerivedKeyResult> addresses = _keyDerivationService.DerivePublicKeys(
                     account.AccountExtendedPublicKey, network, addressType, false, 0, addressCount);
 
                 var walletId = Guid.NewGuid().ToString("D");
@@ -156,6 +251,5 @@ namespace BitcoinWalletMicroService.Orchestrator
             }
 
         }
-
     }
 }

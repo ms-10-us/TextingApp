@@ -9,6 +9,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="RequiredFiles\english.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="RequiredFiles\english.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
 	  <None Update="SQLScripts\Schema.sql">
 		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 	  </None>

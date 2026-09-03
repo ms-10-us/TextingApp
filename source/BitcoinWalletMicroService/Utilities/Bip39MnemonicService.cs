@@ -14,7 +14,26 @@ namespace BitcoinWalletMicroService.Utilities
 
         public string Fingerprint(string mnemonic, string passphrase)
         {
-            throw new NotImplementedException();
+            byte[] seed = ToSeed(mnemonic, passphrase);
+
+            try
+            {
+                using (var sha = SHA256.Create())
+                {
+                    byte[] prefix = Encoding.UTF8.GetBytes("wallet-fingerprint-v1|");
+                    var buffer = new byte[prefix.Length + seed.Length];
+                    Buffer.BlockCopy(prefix, 0, buffer, 0, prefix.Length);
+                    Buffer.BlockCopy(seed, 0, buffer, prefix.Length, seed.Length);
+
+                    byte[] digest = sha.ComputeHash(buffer);
+                    Array.Clear(buffer, 0, buffer.Length);
+                    return ToHex(digest);
+                }
+            }
+            finally 
+            {
+                Array.Clear(seed, 0, seed.Length);
+            }
         }
 
         public MnemonicResult Generate(MnemonicStrength strength)
@@ -209,8 +228,5 @@ namespace BitcoinWalletMicroService.Utilities
                 new[] { ' ', '\t', '\n', '\u3000' },
                 StringSplitOptions.RemoveEmptyEntries));
         }
-
-
-
     }
 }
