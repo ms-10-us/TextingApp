@@ -34,6 +34,8 @@ string secretEntropy = builder.Configuration["Wallet:SecretEntropy"]
         "or Wallet__SecretEntropy in the environment / launchSettings.");
 builder.Services.AddScoped<ISercretProtector>(_ => new AesGcmSecretProtector(secretEntropy));
 
+builder.Services.AddScoped<IQrCodeService, QrCodeService>();
+
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 
 var app = builder.Build();

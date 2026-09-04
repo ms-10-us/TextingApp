@@ -87,7 +87,7 @@ namespace BitcoinWalletMicroService.Utilities
             }
 
             var bits = new bool[totalBits];
-            for (int w = 0; w < bits.Length; w++)
+            for (int w = 0; w < words.Length; w++)
             {
                 int index;
                 if (!EnglishWordList.TryGetIndex(words[w], out index))

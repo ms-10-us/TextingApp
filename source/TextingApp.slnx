@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/TextingAppUnitTests/">
+    <Project Path="../UnitTests/BitcoinWalletMicroServiceUnitTest/BitcoinWalletMicroServiceUnitTest.csproj" Id="adf10bb3-0e2b-4520-b3e6-bf4aed2bac79" />
     <Project Path="../UnitTests/UserMicroServiceUnitTests/UserMicroServiceUnitTests.csproj" />
   </Folder>
   <Project Path="BitcoinWalletMicroService/BitcoinWalletMicroService.csproj" Id="0625c6e7-4e93-4c11-a785-a7f7d44d1622" />

@@ -87,13 +87,13 @@ namespace BitcoinWalletMicroService.Controllers
         public async Task<IActionResult> GetAll(CancellationToken ct)
         {
             IEnumerable<WalletSummary> wallets = await _orchestrator.GetWalletsAsync(ct);
-            IEnumerable<WalletSummaryDtoResponse> response = new List<WalletSummaryDtoResponse>();
+            List<WalletSummaryDtoResponse> response = new List<WalletSummaryDtoResponse>();
             foreach(WalletSummary wallet in wallets)
             {
-                response.Append(wallet.ToDto());
+                response.Add(wallet.ToDto());
             }
 
-            return Ok(wallets);
+            return Ok(response);
         }
 
         [HttpGet("GetWalletById/{walletId}")]
@@ -121,10 +121,10 @@ namespace BitcoinWalletMicroService.Controllers
             }
 
             IEnumerable<DerivedKeyResult> addresses = await _orchestrator.GetAddressesAsync(walletId, isChange, ct).ConfigureAwait(false);
-            IEnumerable<DerivedKeyDtoResponse> response = new List<DerivedKeyDtoResponse>();
+            List<DerivedKeyDtoResponse> response = new List<DerivedKeyDtoResponse>();
             foreach (DerivedKeyResult address in addresses)
             {
-                response.Append(address.ToDto());
+                response.Add(address.ToDto());
             }
 
             return Ok(response);

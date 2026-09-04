@@ -222,7 +222,7 @@ WHERE Id = @WalletId;";
 SELECT Id, WalletId, IsChange, AddressIndex, DerivationPath,
        PublicKeyHex, Address, CreatedUtc
 FROM DerivedKeys
-WHERE Id = @WalletId
+WHERE WalletId = @WalletId
 AND   (@IsChange IS NULL OR IsChange = @IsChange)
 ORDER BY IsChange, AddressIndex;";
 
@@ -240,15 +240,14 @@ ORDER BY IsChange, AddressIndex;";
 
                 return rows.Select(r => new DerivedKeyEntity
                 {
-                    Id = r.WalletId,
-                    WalletId = r.WalletId,
-                    IsChange = r.IsChange,
-                    AddressIndex = r.AddressIndex,
-                    DerivationPath = r.DerivationPath,
-                    PublicKeyHex = r.PublicKeyHex,
-                    Address = r.Address,
-                    PrivateKeyWif = r.PrivateKeyWif,
-                    CreatedUtc = ToUtc(r.CreatedUtc)
+                    Id = (long)r.Id,
+                    WalletId = (string)r.WalletId,
+                    IsChange = (long)r.IsChange != 0,
+                    AddressIndex = (int)(long)r.AddressIndex,
+                    DerivationPath = (string)r.DerivationPath,
+                    PublicKeyHex = (string)r.PublicKeyHex,
+                    Address = (string)r.Address,
+                    CreatedUtc = ToUtc((string)r.CreatedUtc)
                 }).ToList();
             }
         }
