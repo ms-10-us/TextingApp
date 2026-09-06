@@ -27,5 +27,10 @@ namespace BitcoinWalletMicroService.Repository
             CancellationToken ct = default(CancellationToken));
 
         Task<bool> DeleteWalletAsync(string walletId, CancellationToken ct = default(CancellationToken));
+
+        Task<int> GetNextAddressIndexAsync(
+            string walletId,
+            bool isChange,
+            CancellationToken ct = default(CancellationToken));
     }
 }

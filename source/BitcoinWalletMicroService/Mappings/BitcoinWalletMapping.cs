@@ -130,5 +130,39 @@ namespace BitcoinWalletMicroService.Mappings
             };
         }
 
+        public static ReceiveAddressDtoResponse ToDto(this ReceiveAddressResult model)
+        {
+            ArgumentNullException.ThrowIfNull(model);
+
+            return new ReceiveAddressDtoResponse
+            {
+                Address = model.Address,
+                DerivationPath = model.DerivationPath,
+                AddressIndex = model.AddressIndex,
+                IsChange = model.IsChange,
+                PaymentUri = model.PaymentUri
+            };
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     }
 }

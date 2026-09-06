@@ -266,6 +266,26 @@ ORDER BY IsChange, AddressIndex;";
             }
         }
 
+        public async Task<int> GetNextAddressIndexAsync(
+            string walletId,
+            bool isChange,
+            CancellationToken ct = default(CancellationToken))
+        {
+            const string sql = @"
+SELECT COALESCE(MAX(AddressIndex) + 1, 0)
+FROM   DerivedKeys
+WHERE  WalletId = @WalletId AND IsChange = @IsChange;";
+
+            using (IDbConnection connection = _connectionFactory.CreateOpenConnection())
+            {
+                return await connection.ExecuteScalarAsync<int>(
+                    new CommandDefinition(
+                        sql, new { WalletId = walletId, isChange = isChange ? 1 : 0 },
+                        cancellationToken: ct))
+                    .ConfigureAwait(false);
+            }
+        }
+
         private static string ToIso(DateTime value)
         {
             return value.ToUniversalTime().ToString("o");

@@ -23,7 +23,7 @@ namespace BitcoinWalletMicroService.Dapper
             return DateTime.Parse(
                 Convert.ToString(value, CultureInfo.InvariantCulture)!,
                 CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind | DateTimeStyles.AdjustToUniversal);
+                DateTimeStyles.RoundtripKind);
 
         }
 

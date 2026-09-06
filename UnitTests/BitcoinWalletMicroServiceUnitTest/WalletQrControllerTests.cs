@@ -158,7 +158,6 @@ namespace BitcoinWalletMicroServiceUnitTest
             Assert.Equal(TestData.KeyResult(0).Address, dto.Address);
         }
 
-
         private void SetupAddress(DerivedKeyResult? address = null)
         {
             _orchestrator
