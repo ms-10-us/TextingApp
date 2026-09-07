@@ -144,25 +144,125 @@ namespace BitcoinWalletMicroService.Mappings
             };
         }
 
+        public static WalletBalanceDtoResponse ToDto(this WalletBalance model)
+        {
+            ArgumentNullException.ThrowIfNull(model);
 
+            return new WalletBalanceDtoResponse
+            {
+                WalletId = model.WalletId,
+                ConfirmedSats = model.ConfirmedSats,
+                UnconfimredSats = model.UncofirmedSats,
+                TotalSats = model.TotalSats,
+                UtxoCount = model.UtxoCount
+            };
+        }
 
+        public static SendModel ToModel(this SendDto dto, string walletId)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+            ArgumentException.ThrowIfNullOrWhiteSpace(walletId);
 
+            return new SendModel
+            {
+                WalletId = walletId,
+                ToAddress = dto.ToAddress,
+                AmountSats = dto.AmountSats,
+                Passphrase = dto.Passphrase,
+                FeeSats = dto.FeeRateSatsPerVByte,
+                SweepAll = dto.SweepAll,
+                DryRun = dto.DryRun,
+                IdempotencyKey = dto.IdempotencyKey
+            };
 
+        }
 
+        public static SendResult ToResult(this SendTransactionEntity entity)
+        {
+            ArgumentNullException.ThrowIfNull(entity);
 
+            return new SendResult
+            {
+                TxId = entity.TxId,
+                RawTransactionHex = entity.RawTransactionHex,
+                AmountSats = entity.AmountSats,
+                FeeSats = entity.FeeSats,
+                FeeRateSatsPerVByte = entity.VirtualSizeBytes > 0 
+                    ? Math.Round((decimal)entity.FeeSats / entity.VirtualSizeBytes, 2) 
+                    : 0m,
+                VirtualSizeBytes = entity.VirtualSizeBytes,
+                ToAddress = entity.ToAddress,
+                ChangeAddress = entity.ChangeAddress,
+                ChangeSats = entity.ChangeSats,
+                InputCount = entity.InputCount,
+                Broadcast = true,
+                WasIdempotentReplay = true,
+            };
+        }
 
+        public static SendTransactionEntity ToEntity(this SendResult result, string walletId, 
+            string idempotencyKey, DateTime? broadcastUtc = null)
+        {
+            ArgumentNullException.ThrowIfNull(result);
+            ArgumentException.ThrowIfNullOrEmpty(result.TxId);
 
+            return new SendTransactionEntity
+            {
+                TxId = result.TxId,
+                WalletId = walletId,
+                IdempotencyKey = idempotencyKey,
+                ToAddress = result.ToAddress,
+                AmountSats = result.AmountSats,
+                FeeSats = result.FeeSats,
+                VirtualSizeBytes = result.VirtualSizeBytes,
+                InputCount = result.InputCount,
+                ChangeAddress = result.ChangeAddress,
+                ChangeSats = result.ChangeSats,
+                RawTransactionHex = result.RawTransactionHex,
+                BroadcastUtc = broadcastUtc ?? DateTime.UtcNow
+            };
+        }
 
+        public static SendTransaction ToModel(this SendTransactionEntity entity)
+        {
+            if (entity == null)
+            {
+                throw new ArgumentNullException("entity");
+            }
 
+            return new SendTransaction
+            {
+                TxId = entity.TxId,
+                WalletId = entity.WalletId,
+                ToAddress = entity.ToAddress,
+                AmountSats = entity.AmountSats,
+                FeeSats = entity.FeeSats,
+                VirtualSizeBytes = entity.VirtualSizeBytes,
+                InputCount = entity.InputCount,
+                ChangeAddress = entity.ChangeAddress,
+                ChangeSats = entity.ChangeSats,
+                BroadcastUtc = entity.BroadcastUtc
+            };
+        }
 
+        public static SendDtoResponse ToDto(this SendResult model)
+        {
+            ArgumentNullException.ThrowIfNull(model);
 
-
-
-
-
-
-
-
-
+            return new SendDtoResponse
+            {
+                TxId = model.TxId,
+                RawTransactionHex = model.RawTransactionHex,
+                AmountSats = model.AmountSats,
+                FeeSats = model.FeeSats,
+                VirtualSizeBytes = model.VirtualSizeBytes,
+                ToAddress = model.ToAddress,
+                ChangeAddress = model.ChangeAddress,
+                ChangeSats = model.ChangeSats,
+                InputCount = model.InputCount,
+                Broadcast = model.Broadcast,
+                WasIdempotentReplay = model.WasIdempotentReplay
+            };
+        }
     }
 }

@@ -33,7 +33,5 @@ namespace BitcoinWalletMicroService.DBSqlite
 
             _logger.LogInformation("Schema applied successfully.");
         }
-
-
     }
 }

@@ -1,0 +1,13 @@
+﻿using BitcoinWalletMicroService.Entities;
+
+namespace BitcoinWalletMicroService.Repository
+{
+    public interface IWalletTransferRepository
+    {
+        Task<SendTransactionEntity?> GetSendTransactionByIdempotencyKeyAsync(string walletId, string idempotencyKey, CancellationToken ct);
+
+        Task InsertSentTransactionAsync(SendTransactionEntity entity, CancellationToken ct);
+
+        Task<IEnumerable<SendTransactionEntity>> GetSendTransactionAsync(string walletId, CancellationToken ct);
+    }
+}
