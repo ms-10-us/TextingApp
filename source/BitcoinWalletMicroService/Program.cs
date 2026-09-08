@@ -41,6 +41,7 @@ builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 builder.Services.AddScoped<IWalletTransferOrchestrator, WalletTransferOrchestrator>();
 builder.Services.AddScoped<ITransactionBuilderService, TransactionBuilderService>();
 builder.Services.AddHttpClient<IBlockstreamClient, BlockstreamClient>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IWalletTransferRepository, WalletTransferRepository>();
 
 var app = builder.Build();

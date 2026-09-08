@@ -1,4 +1,5 @@
-﻿using BitcoinWalletMicroService.DBSqlite;
+﻿using BitcoinWalletMicroService.Dapper;
+using BitcoinWalletMicroService.DBSqlite;
 using BitcoinWalletMicroService.Entities;
 using Dapper;
 using System.Data;
@@ -78,7 +79,21 @@ VALUES
 
             using (IDbConnection connection = _connectionFactory.CreateOpenConnection())
             {
-                await connection.ExecuteAsync(new CommandDefinition(sql, entity, cancellationToken: ct)).ConfigureAwait(false);
+                await connection.ExecuteAsync(new CommandDefinition(sql, new
+                {
+                    entity.TxId,
+                    entity.WalletId,
+                    entity.IdempotencyKey,
+                    entity.ToAddress,
+                    entity.AmountSats,
+                    entity.FeeSats,
+                    entity.VirtualSizeBytes,
+                    entity.InputCount,
+                    entity.ChangeAddress,
+                    entity.ChangeSats,
+                    entity.RawTransactionHex,
+                    BroadcastUtc = entity.BroadcastUtc.ToSqliteUtc(),
+                }, cancellationToken: ct)).ConfigureAwait(false);
             }
         }
 
@@ -94,8 +109,22 @@ VALUES
 
             using (IDbConnection connection = _connectionFactory.CreateOpenConnection())
             {
-                await connection.ExecuteAsync(new CommandDefinition(sql, deposit, cancellationToken: ct))
-                    .ConfigureAwait(false);
+                await connection.ExecuteAsync(new CommandDefinition(sql, new
+                {
+                    deposit.DepositId,
+                    deposit.WalletId,
+                    deposit.Address,
+                    deposit.AddressIndex,
+                    deposit.IsChange,
+                    deposit.ExpectedSats,
+                    deposit.Label,
+                    deposit.ReceivedSats,
+                    deposit.Status,
+                    deposit.TxId,
+                    CreatedUtc = deposit.CreatedUtc.ToSqliteUtc(),
+                    ExpiresUtc = deposit.ExpiresUtc.ToSqliteUtc(),
+                    ConfirmedUtc = deposit.ConfirmedUtc.ToSqliteUtc()
+                }, cancellationToken: ct)).ConfigureAwait(false);
             }
         }
 
@@ -128,8 +157,14 @@ WHERE  DepositId    = @DepositId;";
 
             using (IDbConnection connection = _connectionFactory.CreateOpenConnection())
             {
-                var rows = await connection.ExecuteAsync(new CommandDefinition(sql, deposit, cancellationToken: ct))
-                    .ConfigureAwait(false);
+                await connection.ExecuteAsync(new CommandDefinition(sql, new
+                {
+                    deposit.ReceivedSats,
+                    deposit.Status,
+                    deposit.TxId,
+                    ConfirmedUtc = deposit.ConfirmedUtc.ToSqliteUtc(),
+                    deposit.DepositId
+                }, cancellationToken: ct)).ConfigureAwait(false);
             }
         }
 

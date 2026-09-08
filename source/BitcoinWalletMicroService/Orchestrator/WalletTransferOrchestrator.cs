@@ -20,6 +20,7 @@ namespace BitcoinWalletMicroService.Orchestrator
         private readonly IBlockstreamClient _blockstreamClient = default!;
         private readonly ITransactionBuilderService _transactionBuilder = default!;
         private readonly ILogger<WalletTransferOrchestrator> _logger = default!;
+        private readonly TimeProvider _timeProvider = default!;
 
         public WalletTransferOrchestrator(
             IWalletRepository repository,
@@ -29,7 +30,8 @@ namespace BitcoinWalletMicroService.Orchestrator
             ISercretProtector sercretProtector,
             IBlockstreamClient blockstreamClient,
             ITransactionBuilderService transactionBuilder,
-            ILogger<WalletTransferOrchestrator> logger)
+            ILogger<WalletTransferOrchestrator> logger,
+            TimeProvider timeProvider)
         {
             _repository = repository;
             _transferRepository = transferRepository;
@@ -39,6 +41,7 @@ namespace BitcoinWalletMicroService.Orchestrator
             _blockstreamClient = blockstreamClient;
             _transactionBuilder = transactionBuilder;
             _logger = logger;
+            _timeProvider = timeProvider;
         }
 
 
@@ -130,9 +133,10 @@ namespace BitcoinWalletMicroService.Orchestrator
                     _logger.LogInformation(
                         "Idempotent replay for key {Key}; returning existing transaction {TxId}.",
                         model.IdempotencyKey, alreadySent.TxId);
-                }
 
-                return alreadySent.ToResult();
+                    return alreadySent.ToResult();
+                }
+                                
             }
 
             WalletEntity wallet = await _repository.GetWalletByIdAsync(model.WalletId, ct)
@@ -338,7 +342,7 @@ namespace BitcoinWalletMicroService.Orchestrator
             BitcoinNetwork network = ParseNetwork(wallet.Network);
 
             AddressStats stats = await _blockstreamClient
-                .GetAddressStatsAsync(walletId, network, ct)
+                .GetAddressStatsAsync(deposit.Address, network, ct)
                 .ConfigureAwait(false);
 
             int confirmations = 0;
@@ -360,7 +364,8 @@ namespace BitcoinWalletMicroService.Orchestrator
                 }    
             }
 
-            DepositStatus newStatus = DetermineStatus(deposit, stats, confirmations);
+            DateTime utcNow = _timeProvider.GetUtcNow().UtcDateTime;
+            DepositStatus newStatus = DetermineStatus(deposit, stats, confirmations, utcNow);
 
             bool changed = !string.Equals(deposit.Status, newStatus.ToString(), StringComparison.Ordinal)
                         || deposit.ReceivedSats != stats.ConfirmedReceivedSats;
@@ -372,7 +377,7 @@ namespace BitcoinWalletMicroService.Orchestrator
 
                 if (newStatus == DepositStatus.Confirmed && deposit.ConfirmedUtc == null)
                 {
-                    deposit.ConfirmedUtc = DateTime.UtcNow;
+                    deposit.ConfirmedUtc = utcNow;
                 }
 
                 await _transferRepository.UpdateDepositAsync(deposit, ct).ConfigureAwait(false);
@@ -474,7 +479,8 @@ namespace BitcoinWalletMicroService.Orchestrator
         private static DepositStatus DetermineStatus(
             DepositEntity deposit,
             AddressStats stats,
-            int confirmations)
+            int confirmations, 
+            DateTime utcNow)
         {
             if (string.Equals(deposit.Status, DepositStatus.Confirmed.ToString(), StringComparison.Ordinal))
             {
@@ -496,7 +502,7 @@ namespace BitcoinWalletMicroService.Orchestrator
                 return DepositStatus.Detected;
             }
 
-            if (DateTime.UtcNow > deposit.ExpiresUtc)
+            if (utcNow > deposit.ExpiresUtc)
             {
                 return DepositStatus.Expired;
             }
