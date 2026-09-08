@@ -112,7 +112,55 @@ namespace BitcoinWalletMicroService.Utilities
             }
         }
 
+        public async Task<AddressStats> GetAddressStatsAsync(
+            string address, BitcoinNetwork network, CancellationToken ct = default)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(address);
+
+            string url = $"{BaseUrl(network)}/address/{address}";
+
+            BlockstreamAddress? raw = await _httpClient
+                .GetFromJsonAsync<BlockstreamAddress>(url, ct)
+                .ConfigureAwait(false);
+
+            if (raw == null)
+            {
+                return new AddressStats
+                {
+                    Address = address,
+                    ConfirmedReceivedSats = 0,
+                    UnconfirmedReceivedSats = 0,
+                    ConfirmedTxCount = 0,
+                    UnconfirmedTxCount = 0
+                };
+            }
+
+            return new AddressStats
+            {
+                Address = address,
+                ConfirmedReceivedSats = raw.ChainStats?.FundedTxoSum ?? 0,
+                UnconfirmedReceivedSats = raw.MempoolStats?.FundedTxoSum ?? 0,
+                ConfirmedTxCount = raw.ChainStats?.TxCount ?? 0,
+                UnconfirmedTxCount = raw.MempoolStats?.TxCount ?? 0
+            };
+        }
+
+        public async Task<int> GetBlockHeightAsync(BitcoinNetwork network, CancellationToken ct = default)
+        {
+            string text = await _httpClient
+                .GetStringAsync($"{BaseUrl(network)}/blocks/tip/height", ct)
+                .ConfigureAwait(false);
+
+            if (!int.TryParse(text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int height))
+            {
+                throw new InvalidOperationException(
+                    $"Unexpected response from tip height endpoint: '{text}'.");
+            }
+
+            return height;
+        }
+
         private static string BaseUrl(BitcoinNetwork network) =>
-            network == BitcoinNetwork.Main ? MainnetBaseUrl : TestnetBaseUrl;
+            network == BitcoinNetwork.Main ? MainnetBaseUrl : TestnetBaseUrl;        
     }
 }

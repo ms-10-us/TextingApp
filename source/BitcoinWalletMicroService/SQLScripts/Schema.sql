@@ -59,3 +59,34 @@ CREATE UNIQUE INDEX IF NOT EXISTS UX_SentTransactions_TxId
 
 CREATE INDEX IF NOT EXISTS IX_SentTransactions_Wallet
     ON SentTransactions (WalletId, BroadcastUTC DESC);
+
+CREATE TABLE IF NOT EXISTS Deposits (
+    Id            INTEGER  NOT NULL PRIMARY KEY AUTOINCREMENT,
+    DepositId     TEXT     NOT NULL,
+    WalletId      TEXT     NOT NULL,
+    Address       TEXT     NOT NULL,
+    AddressIndex  INTEGER  NOT NULL,
+    IsChange      INTEGER  NOT NULL,
+    ExpectedSats  INTEGER  NULL,
+    Label         TEXT     NULL,
+    ReceivedSats  INTEGER  NOT NULL DEFAULT 0,
+    Status        TEXT     NOT NULL,
+    TxId          TEXT     NULL,
+    CreatedUtc    TEXT     NOT NULL,
+    ExpiresUtc    TEXT     NOT NULL,
+    ConfirmedUtc  TEXT     NULL,
+    CONSTRAINT FK_Deposits_Wallets
+        FOREIGN KEY (WalletId) REFERENCES Wallets (Id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Deposits_DepositId
+    ON Deposits (DepositId);
+
+CREATE UNIQUE INDEX IF NOT EXISTS UX_Deposits_Address
+    ON Deposits (Address);
+
+CREATE INDEX IF NOT EXISTS IX_Deposits_Wallet
+    ON Deposits (WalletId, CreatedUtc DESC);
+
+CREATE INDEX IF NOT EXISTS IX_Deposits_Status
+    ON Deposits (Status, ExpiresUtc);

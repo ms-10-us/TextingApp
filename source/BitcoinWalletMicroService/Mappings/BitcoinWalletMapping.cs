@@ -1,7 +1,9 @@
 ﻿using BitcoinWalletMicroService.Dtos;
 using BitcoinWalletMicroService.Entities;
+using BitcoinWalletMicroService.Enums;
 using BitcoinWalletMicroService.Models;
 using System.Reflection.Emit;
+using System.Reflection.Metadata.Ecma335;
 
 namespace BitcoinWalletMicroService.Mappings
 {
@@ -264,5 +266,69 @@ namespace BitcoinWalletMicroService.Mappings
                 WasIdempotentReplay = model.WasIdempotentReplay
             };
         }
+
+        public static CreateDepositModel ToModel(this CreateDepositDto dto, string waletId)
+        {
+            ArgumentNullException.ThrowIfNull(dto);
+
+            return new CreateDepositModel
+            {
+                WalletId = waletId,
+                ExpectedSats = dto.ExpectedSats,
+                Label = dto.Label,
+                ExpiryMinutes = dto.ExpiryMinutes
+            };
+        }
+
+        public static DepositDtoResponse ToDto(this DepositResult model)
+        {
+            ArgumentNullException.ThrowIfNull("model");
+
+            return new DepositDtoResponse
+            {
+                DepositId = model.DepositId,
+                WalletId = model.WalletId,
+                Address = model.Address,
+                PaymentUri = model.PaymentUri,
+                ExpectedSats = model.ExpectedSats,
+                ReceivedSats = model.ReceivedSats,
+                UnconfirmedSats = model.UnconfirmedSats,
+                Status = model.Status.ToString(),
+                Confirmations = model.Confirmations,
+                TxId = model.TxId,
+                CreatedUtc = model.CreatedUtc,
+                ExpiresUtc = model.ExpiresUtc,
+                ConfirmedUtc = model.ConfirmedUtc
+            };
+        }
+
+        public static DepositResult ToResult (
+            this DepositEntity entity,
+            string paymentUri,
+            long unconfirmedSats,
+            int confirmations)
+        {
+            ArgumentNullException.ThrowIfNull("entity");
+
+            return new DepositResult
+            {
+                DepositId = entity.DepositId,
+                WalletId = entity.WalletId,
+                Address = entity.Address,
+                PaymentUri = paymentUri,
+                ExpectedSats = entity.ExpectedSats,
+                ReceivedSats = entity.ReceivedSats,
+                UnconfirmedSats = unconfirmedSats,
+                Status = Enum.TryParse(entity.Status, out DepositStatus status)
+                    ? status
+                    : DepositStatus.Pending,
+                Confirmations = confirmations,
+                TxId = entity.TxId,
+                CreatedUtc = entity.CreatedUtc,
+                ExpiresUtc = entity.ExpiresUtc,
+                ConfirmedUtc = entity.ConfirmedUtc
+            };
+        }
+
     }
 }

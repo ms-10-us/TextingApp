@@ -11,5 +11,10 @@ namespace BitcoinWalletMicroService.Utilities
         Task<decimal> GetFeeRateAsync(BitcoinNetwork network, int targetBlocks = 6, CancellationToken ct = default);
 
         Task<string> BroadcastAsync(string rawTransactionHex, BitcoinNetwork network, CancellationToken ct = default);
+
+        Task<AddressStats> GetAddressStatsAsync(
+            string address, BitcoinNetwork network, CancellationToken ct = default);
+
+        Task<int> GetBlockHeightAsync(BitcoinNetwork network, CancellationToken ct = default);
     }
 }

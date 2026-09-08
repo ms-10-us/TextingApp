@@ -10,6 +10,7 @@ namespace BitcoinWalletMicroService.Orchestrator
     public class WalletTransferOrchestrator : IWalletTransferOrchestrator
     {
         private const int DefaultFeeTargetBlocks = 6;
+        private const int RequiredConfirmations = 6;
 
         private readonly IWalletRepository _repository = default!;
         private readonly IWalletTransferRepository _transferRepository = default!;
@@ -257,6 +258,152 @@ namespace BitcoinWalletMicroService.Orchestrator
             return result;
         }
 
+        public async Task<DepositResult> CreateDepositeAsync(
+            CreateDepositModel model,
+            CancellationToken ct = default(CancellationToken))
+        {
+            if (model == null)
+            {
+                throw new ArgumentNullException("model");
+            }
+
+            if (model.ExpectedSats.HasValue && model.ExpectedSats.Value < 294)
+            {
+                throw new ArgumentException("Expected amount is below the dust threshold of 294 sats; such a payment cannot be relayed.",
+                    "model");
+            }
+
+            WalletEntity wallet = await _repository.GetWalletByIdAsync(model.WalletId, ct).ConfigureAwait(false);
+
+            if (wallet == null)
+            {
+                throw new KeyNotFoundException($"Wallet {model.WalletId} was not found");
+            }
+
+            BitcoinNetwork network = ParseNetwork(wallet.Network);
+            AddressType addressType = ParseAddressType(wallet.AccountDerivationPath);
+
+            int nextIndex = await _repository.GetNextAddressIndexAsync(model.WalletId, false, ct).ConfigureAwait(false);
+
+            DerivedKeyResult derived = _keyDerivationService.DerivePublicKeys(wallet.AccountExtendedPublicKey, network,
+                addressType, false, nextIndex, 1).Single();
+
+            DateTime now = DateTime.UtcNow;
+
+            await _repository.InsertDerivedKeyAsync([derived.ToEntity(model.WalletId, now)], null, ct).ConfigureAwait(false);
+
+            DepositEntity entity = new DepositEntity
+            {
+                DepositId = Guid.NewGuid().ToString("D"),
+                WalletId = model.WalletId,
+                Address = derived.Address,
+                AddressIndex = derived.AddressIndex,
+                IsChange = derived.IsChange,
+                ExpectedSats = model.ExpectedSats,
+                Label = model.Label,
+                ReceivedSats = 0,
+                Status = DepositStatus.Pending.ToString(),
+                TxId = null,
+                CreatedUtc = now,
+                ExpiresUtc = now.AddMinutes(model.ExpiryMinutes),
+                ConfirmedUtc = null
+            };
+
+            await _transferRepository.InsertDepositAsync(entity, ct).ConfigureAwait(false);
+
+            _logger.LogInformation("Deposit {DepositId} created for wallet {WalletId} at {Address}, expecting {Expected} sats.",
+                entity.DepositId, model.WalletId, entity.Address, model.ExpectedSats);
+
+            return entity.ToResult(BuildPaymnetUri(entity), unconfirmedSats: 0, confirmations: 0);
+        }
+
+        public async Task<DepositResult> GetDepositAsync(
+            string walletId,
+            string depositId,
+            CancellationToken ct = default(CancellationToken))
+        {
+            DepositEntity? deposit = await _transferRepository
+                .GetDepositByIdAsync(walletId, depositId, ct)
+                .ConfigureAwait(false);
+
+            if (deposit == null)
+            {
+                throw new KeyNotFoundException($"Deposit {depositId} was not found");
+            }
+
+            WalletEntity wallet = await _repository
+                .GetWalletByIdAsync(walletId, ct)
+                .ConfigureAwait(false);
+
+            BitcoinNetwork network = ParseNetwork(wallet.Network);
+
+            AddressStats stats = await _blockstreamClient
+                .GetAddressStatsAsync(walletId, network, ct)
+                .ConfigureAwait(false);
+
+            int confirmations = 0;
+
+            if (stats.ConfirmedReceivedSats > 0)
+            {
+                IEnumerable<Utxo> utxos = await _blockstreamClient
+                    .GetUtxoAsync(deposit.Address, deposit.IsChange, deposit.AddressIndex, network, ct)
+                    .ConfigureAwait(false);
+
+                Utxo? confirmed = utxos.FirstOrDefault(u => u.IsConfirmed && u.BlockHeight.HasValue);
+
+                if (confirmed != null)
+                {
+                    int tip = await _blockstreamClient.GetBlockHeightAsync(network, ct).ConfigureAwait(false);
+
+                    confirmations = Math.Max(0, tip - confirmed.BlockHeight!.Value + 1);
+                    deposit.TxId ??= confirmed.TxId;
+                }    
+            }
+
+            DepositStatus newStatus = DetermineStatus(deposit, stats, confirmations);
+
+            bool changed = !string.Equals(deposit.Status, newStatus.ToString(), StringComparison.Ordinal)
+                        || deposit.ReceivedSats != stats.ConfirmedReceivedSats;
+
+            if (changed)
+            {
+                deposit.Status = newStatus.ToString();
+                deposit.ReceivedSats = stats.ConfirmedReceivedSats;
+
+                if (newStatus == DepositStatus.Confirmed && deposit.ConfirmedUtc == null)
+                {
+                    deposit.ConfirmedUtc = DateTime.UtcNow;
+                }
+
+                await _transferRepository.UpdateDepositAsync(deposit, ct).ConfigureAwait(false);
+
+                _logger.LogInformation(
+                    "Deposit {DepositId} is now {Status} with {Received} sats and {Confirmations} confirmations.",
+                    deposit.DepositId, newStatus, deposit.ReceivedSats, confirmations);
+            }
+
+
+            return deposit.ToResult(
+                BuildPaymnetUri(deposit),
+                stats.UnconfirmedReceivedSats,
+                confirmations);
+        }
+
+        public async Task<IEnumerable<DepositResult>> GetDepositsAsync(string walletId, CancellationToken ct = default)
+        {
+            IEnumerable<DepositEntity> deposits = await _transferRepository
+                .GetDepositsAsync(walletId, ct)
+                .ConfigureAwait(false);
+
+            List<DepositResult> result = new List<DepositResult>();
+            foreach(DepositEntity deposit in deposits)
+            {
+                result.Add(deposit.ToResult(BuildPaymnetUri(deposit), 0, 0));
+            }
+
+            return result;
+        }
+        
         private static BitcoinNetwork ParseNetwork(string value) =>
             string.Equals(value, "TestNet", StringComparison.OrdinalIgnoreCase)
             ? BitcoinNetwork.TestNet
@@ -313,6 +460,48 @@ namespace BitcoinWalletMicroService.Orchestrator
             }
 
             return utxos;
+        }
+
+        private static string BuildPaymnetUri(DepositEntity deposit)
+        {
+            decimal? amountBtc = deposit.ExpectedSats.HasValue
+                ? deposit.ExpectedSats.Value / 100_000_000m
+                : null;
+
+            return BipUriBuilder.Build(deposit.Address, amountBtc, deposit.Label);
+        }
+
+        private static DepositStatus DetermineStatus(
+            DepositEntity deposit,
+            AddressStats stats,
+            int confirmations)
+        {
+            if (string.Equals(deposit.Status, DepositStatus.Confirmed.ToString(), StringComparison.Ordinal))
+            {
+                return DepositStatus.Confirmed;
+            }
+
+            if (stats.ConfirmedReceivedSats > 0 && confirmations >= RequiredConfirmations)
+            {
+                if (deposit.ExpectedSats.HasValue && stats.ConfirmedReceivedSats < deposit.ExpectedSats.Value)
+                {
+                    return DepositStatus.Underpaid;
+                }
+
+                return DepositStatus.Confirmed;
+            }
+
+            if (stats.TotalReceivedSats > 0)
+            {
+                return DepositStatus.Detected;
+            }
+
+            if (DateTime.UtcNow > deposit.ExpiresUtc)
+            {
+                return DepositStatus.Expired;
+            }
+
+            return DepositStatus.Pending;
         }
     }
 }

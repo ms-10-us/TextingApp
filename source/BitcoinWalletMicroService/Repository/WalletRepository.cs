@@ -280,7 +280,7 @@ WHERE  WalletId = @WalletId AND IsChange = @IsChange;";
             {
                 return await connection.ExecuteScalarAsync<int>(
                     new CommandDefinition(
-                        sql, new { WalletId = walletId, isChange = isChange ? 1 : 0 },
+                        sql, new { WalletId = walletId, IsChange = isChange ? 1 : 0 },
                         cancellationToken: ct))
                     .ConfigureAwait(false);
             }
