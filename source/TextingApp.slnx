@@ -9,5 +9,6 @@
     <Build />
   </Project>
   <Project Path="MainMicroService/MainMicroService.csproj" />
+  <Project Path="SessionSetupMicroService/SessionSetupMicroService.csproj" />
   <Project Path="UserMicroService/UserMicroService.csproj" />
 </Solution>

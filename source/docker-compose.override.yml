@@ -8,3 +8,11 @@ services:
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
+
+  sessionsetupmicroservice:
+    volumes:
+      # Same mounts as the other services so F5 debugging into the container works and user
+      # secrets resolve. The project already has a UserSecretsId, which is the right home for
+      # anything you would otherwise be tempted to type into a compose file.
+      - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
