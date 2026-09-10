@@ -1,4 +1,5 @@
 ﻿using SessionSetupMicroService.Dtos;
+using SessionSetupMicroService.Entities;
 using SessionSetupMicroService.Enums;
 using SessionSetupMicroService.Models;
 
@@ -6,6 +7,10 @@ namespace SessionSetupMicroService.Mapping
 {
     public static class SessionSetupMapping
     {
+        private const string CurveValue = "curve";
+        private const string KyberValue = "kyber";
+
+
         public static RegisterDeviceModel? ToModel(this RegisterDeviceRequest request)
         {
             if (!RegistrationId.TryCreate(request.RegistrationId, out var registrationId))
@@ -35,6 +40,44 @@ namespace SessionSetupMicroService.Mapping
                 Address = result.Device.Address.ToString(),
                 DeviceCredential = result.DeviceCredentials,
                 RegisteredAt = result.Device.RegisteredAt
+            };
+        }
+
+        public static DeviceResponse ToResponse(this Device device)
+        {
+            return new DeviceResponse
+            {
+                DeviceId = device.Address.Device.Value,
+                Address = device.Address.ToString(),
+                DeviceName = device.DisplayName,
+                RegistrationId = device.RegistrationId.Value,
+                IdentityDto = device.IdentityKey.ToDto(),
+                RegisteredAt = device.RegisteredAt,
+                LastSeenAt = device.LastSeen
+            };
+        }
+
+        public static string ToEntity(this PreKeyKind kind) => kind switch
+        {
+            PreKeyKind.Curve => CurveValue,
+            PreKeyKind.Kyber => KyberValue,
+            _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unkown prekey kind.")
+        };
+
+        public static Device ToModel(this DeviceEntity entity)
+        {
+            return new Device
+            {
+                Address = new ProtocolAddress(new AccountId(entity.AccountId), new DeviceId(entity.DeviceId)),
+                DisplayName = entity.DisplayName,
+                RegistrationId = new RegistrationId(entity.RegistrationId),
+                IdentityKey = new PublicKey
+                {
+                    Algorithm = entity.IdentityAlgorithm,
+                    Value = entity.IdentityKey,
+                },
+                RegisteredAt = entity.RegisteredAt,
+                LastSeen = entity.LastSeenAt
             };
         }
 
@@ -81,21 +124,13 @@ namespace SessionSetupMicroService.Mapping
             };
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        private static PublicKeyDto ToDto(this PublicKey model)
+        {
+            return new PublicKeyDto
+            {
+                Algorithm = model.Algorithm,
+                Key = model.Value
+            };
+        }
     }
 }

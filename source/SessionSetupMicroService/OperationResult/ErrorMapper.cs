@@ -20,6 +20,28 @@ namespace SessionSetupMicroService.OperationResult
             return controller.StatusCode(status, problem);
         }
 
+        public static IActionResult MalformedAddress(this ControllerBase controller, string value) =>
+            controller.BadRequest(new ProblemDetails
+            {
+                Title = "Malformed protocol address",
+                Detail = $"'{value}' is not a valid {{account}}.{{device}} address.",
+                Status = StatusCodes.Status400BadRequest
+            });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         private static int StatusFor(SessionSetupErrorCode code) => code switch
         {
             SessionSetupErrorCode.DeviceNotFound => StatusCodes.Status404NotFound,

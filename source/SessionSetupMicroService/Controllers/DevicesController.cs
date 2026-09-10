@@ -50,5 +50,22 @@ namespace SessionSetupMicroService.Controllers
                 address = response.Address
             }, response);
         }
+
+        [HttpGet("{address}")]
+        [ProducesResponseType<DeviceResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Get([FromRoute] string address, CancellationToken ct)
+        {
+            if (!ProtocolAddress.TryParse(address, out var parsed))
+            {
+                return this.MalformedAddress(address);
+            }
+
+            var result = await _orchestrator.GetAsync(parsed, ct);
+
+            return result.IsSuccess
+                ? Ok(result.Value!.ToResponse())
+                : this.ToActionResult(result.Error!);
+        }
     }
 }
