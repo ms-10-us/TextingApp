@@ -1,6 +1,7 @@
 ﻿using SessionSetupMicroService.Dtos;
 using SessionSetupMicroService.Entities;
 using SessionSetupMicroService.Enums;
+using SessionSetupMicroService.ExtensionMethods;
 using SessionSetupMicroService.Models;
 
 namespace SessionSetupMicroService.Mapping
@@ -81,6 +82,72 @@ namespace SessionSetupMicroService.Mapping
             };
         }
 
+        public static PreKeyBundleResponse ToResponse(this PreKeyBundle model)
+        {
+            return new PreKeyBundleResponse
+            {
+                Address = model.Address.ToString(),
+                RegistrationId = model.RegistrationId.Value,
+                IdentityKey = model.IdentityKey.ToDto(),
+                SignedPreKey = model.SignedPreKey.ToDto(),
+                OneTimePreKey = model.OneTimePreKey?.ToDto(),
+                KyberPreKey = model.KyberPreKey.ToDto(),
+                ServedLastResportKyberPreKey = model.ServedLastResortKyberPreKey
+            }; 
+        }
+
+        public static PreKeyKind ToModel(string value) => value switch
+        {
+            CurveValue => PreKeyKind.Curve,
+            KyberValue => PreKeyKind.Kyber,
+            _ => throw new InvalidOperationException($"Unkown prekey kind stored in the database : '{value}'.")
+        };
+
+        public static SignedPreKey ToModel(this SignedPreKeyEntity entity)
+        {
+            PreKeyKind kind = ToModel(entity.Kind);
+            return new SignedPreKey
+            {
+                Kind = kind,
+                Id = new PreKeyId(entity.KeyId),
+                PublicKey = new PublicKey
+                {
+                    Algorithm = kind.ToAlgorithm(),
+                    Value = entity.PublicKey
+                },
+                Signature = entity.Signature,
+                CreatedAt = entity.CreatedAt
+            };
+        }
+
+        public static OneTimePreKey ToModel(this OneTimePreKeyEntity entity)
+        {
+            PreKeyKind kind = ToModel(entity.Kind);
+            return new OneTimePreKey
+            {
+                Kind = kind,
+                Id = new PreKeyId(entity.KeyId),
+                PublicKey = new PublicKey
+                {
+                    Algorithm = kind.ToAlgorithm(),
+                    Value = entity.PublicKey
+                },
+                Signature = entity.Signature,
+            };
+        }
+
+        public static PreKeyInventoryResponse ToResponse(this PreKeyInventory inventory, int lowWaterMark, int maxPoolSize)
+        {
+            return new PreKeyInventoryResponse
+            {
+                OneTimePreKeys = inventory.Curve,
+                OneTimeKyberPreKeys = inventory.Kyber,
+                NeedsReplenishment = inventory.IsBelow(lowWaterMark),
+                LowWaterMark = lowWaterMark,
+                MaxPoolSize = maxPoolSize
+            };            
+        }
+
         private static PublicKey ToModel(this  PublicKeyDto dto)
         {
             return new PublicKey
@@ -132,5 +199,26 @@ namespace SessionSetupMicroService.Mapping
                 Key = model.Value
             };
         }
+
+        private static SignedPreKeyDto ToDto(this SignedPreKey model)
+        {
+            return new SignedPreKeyDto
+            {
+                KeyId = model.Id.Value,
+                PublicKey = model.PublicKey.ToDto(),
+                Signature = model.Signature
+            };
+        }
+
+        private static OneTimePreKeyDto ToDto(this OneTimePreKey model)
+        {
+            return new OneTimePreKeyDto
+            {
+                KeyId = model.Id.Value,
+                PublicKey = model.PublicKey.ToDto(),
+            };
+
+        }
+
     }
 }

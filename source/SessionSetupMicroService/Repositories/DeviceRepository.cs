@@ -50,15 +50,32 @@ namespace SessionSetupMicroService.Repositories
             return await reader.ReadAsync(ct) ? ReadDevice(reader).ToModel() : null;
         }
 
+        public async Task<IEnumerable<Device>> ListByAccountAsync(AccountId account, CancellationToken ct = default)
+        {
+            await using var command = await _scope.CreateCommandAsync(SessionSetupSql.ListDevicesByAccount, ct);
+            command.Bind("@account_id", account.Value);
 
+            var devices = new List<Device>();
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct)) devices.Add(ReadDevice(reader).ToModel());
+            return devices;
+        }
 
+        public async Task<byte[]?> GetCredentialHashAsync(ProtocolAddress address, CancellationToken ct = default)
+        {
+            await using var command = await _scope.CreateCommandAsync(SessionSetupSql.GetCredentialHash, ct);
+            BindAddress(command, address);
 
+            await using var reader = await command.ExecuteReaderAsync(ct);
+            return await reader.ReadAsync(ct) ? reader.GetBytes("credential_hash") : null;
+        }
 
-
-
-
-
-
+        public async Task<bool> ExistsAsync(ProtocolAddress address, CancellationToken ct = default)
+        {
+            await using var command = await _scope.CreateCommandAsync(SessionSetupSql.DeviceExists, ct);
+            BindAddress(command, address);
+            return await command.ExecuteScalarAsync(ct) is true;
+        }
 
         private static void BindAddress(DbCommand command, ProtocolAddress address) =>
             command.Bind("@account_id", address.Account.Value).Bind("@device_id", address.Device.Value);

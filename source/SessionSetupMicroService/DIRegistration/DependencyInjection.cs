@@ -35,7 +35,7 @@ namespace SessionSetupMicroService.DIRegistration
                 services.AddPostgresPersistence(database);
             }
 
-            services.AddSingleton<IDeviceCredentailHasher, Sha256DeviceCredentialHasher>();
+            services.AddSingleton<IDeviceCredentialHasher, Sha256DeviceCredentialHasher>();
 
             services.AddScoped<IDeviceRegistrationOrchestrator, DeviceRegistrationOrchestrator>();
             services.AddScoped<IPreKeyOrchestrator, PreKeyOrchestrator>();

@@ -1,20 +1,23 @@
-﻿namespace SessionSetupMicroService.Security
+﻿using System.Security.Cryptography;
+using System.Text;
+
+namespace SessionSetupMicroService.Security
 {
     public class Sha256DeviceCredentialHasher : IDeviceCredentialHasher
     {
         public string Generate()
         {
-            throw new NotImplementedException();
+            return Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         }
 
         public byte[] Hash(string credential)
         {
-            throw new NotImplementedException();
+            return SHA256.HashData(Encoding.UTF8.GetBytes(credential));
         }
 
         public bool Verify(string credential, byte[] storedHash)
         {
-            throw new NotImplementedException();
+            return CryptographicOperations.FixedTimeEquals(Hash(credential), storedHash);
         }
     }
 }

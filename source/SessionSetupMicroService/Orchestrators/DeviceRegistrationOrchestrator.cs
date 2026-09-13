@@ -104,5 +104,16 @@ namespace SessionSetupMicroService.Orchestrators
                 return Result<Device>.Success(device);
             }
         }
+
+        public async Task<Result<IEnumerable<Device>>> ListAsync(AccountId account, CancellationToken ct = default)
+        {
+            var found = await _devices.ListByAccountAsync(account, ct);
+            if (found.Count() == 0)
+            {
+                return Result<IEnumerable<Device>>.Failure(SessionSetupError.DeviceNotFound(account));
+            }
+
+            return Result<IEnumerable<Device>>.Success(found);
+        }
     }
 }

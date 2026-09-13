@@ -30,7 +30,7 @@ namespace SessionSetupMicroService.Validators
                 return curveProblem;
             }
 
-            if (ValidateSignedPreKey(registration.LastResortKyberPreKey, PreKeyKind.Curve) is { } kyberProblem)
+            if (ValidateSignedPreKey(registration.LastResortKyberPreKey, PreKeyKind.Kyber) is { } kyberProblem)
             {
                 return kyberProblem;
             }

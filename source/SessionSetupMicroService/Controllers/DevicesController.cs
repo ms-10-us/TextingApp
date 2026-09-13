@@ -67,5 +67,30 @@ namespace SessionSetupMicroService.Controllers
                 ? Ok(result.Value!.ToResponse())
                 : this.ToActionResult(result.Error!);
         }
+
+        [HttpGet("~/v1/accounts/{account}/devices")]
+        [ProducesResponseType<IEnumerable<DeviceResponse>>(StatusCodes.Status200OK)]
+        [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ListByAccount([FromRoute] string account, CancellationToken ct)
+        {
+            if (!AccountId.TryParse(account, out var parsed))
+            {
+                return BadRequest(new ProblemDetails
+                {
+                    Title = "Malformed account id",
+                    Detail = $"'{account}' is not a valid account identifier.",
+                    Status = StatusCodes.Status400BadRequest
+                });
+            }
+
+            var result = await _orchestrator.ListAsync(parsed, ct);
+            if (result.IsSuccess)
+            {
+                return Ok(result.Value!.Select(device => device.ToResponse()).ToList());
+            }
+
+            return this.ToActionResult(result.Error!);
+
+        }
     }
 }
