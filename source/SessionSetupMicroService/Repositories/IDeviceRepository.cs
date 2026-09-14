@@ -1,4 +1,5 @@
 ﻿using SessionSetupMicroService.Models;
+using SessionSetupMicroService.PostgresDB;
 
 namespace SessionSetupMicroService.Repositories
 {
@@ -6,7 +7,7 @@ namespace SessionSetupMicroService.Repositories
     {
         Task EnsureAccountAsync(AccountId account, CancellationToken ct = default);
 
-        Task InsertAsync(ProtocolAddress address, RegisterDeviceModel registration, byte[] credentialHash, CancellationToken ct = default);
+        Task<bool> InsertAsync(ProtocolAddress address, RegisterDeviceModel registration, byte[] credentialHash, CancellationToken ct = default);
 
         Task<Device?> FindAsync(ProtocolAddress address, CancellationToken ct = default);
 
@@ -14,6 +15,13 @@ namespace SessionSetupMicroService.Repositories
 
         Task<byte[]?> GetCredentialHashAsync(ProtocolAddress address, CancellationToken ct = default);
 
-        Task<bool> ExistsAsync(ProtocolAddress address, CancellationToken ct = default);    
+        Task<bool> ExistsAsync(ProtocolAddress address, CancellationToken ct = default); 
+        
+        Task TouchAsync(ProtocolAddress address, CancellationToken ct = default);
+
+        Task<bool> LockAccountAsync(AccountId account, CancellationToken ct = default);
+
+        Task<DeviceId> NextDeviceIdAsync(AccountId account, CancellationToken ct = default);
+      
     }
 }

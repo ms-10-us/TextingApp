@@ -7,6 +7,9 @@ namespace SessionSetupMicroService.OperationResult
         public static SessionSetupError DeviceNotFound(object address) =>
         new(SessionSetupErrorCode.DeviceNotFound, $"No device is registered at {address}.");
 
+        public static SessionSetupError DeviceAlreadyRegistered(object address) =>
+            new(SessionSetupErrorCode.DeviceAlreadyRegistered, $"A device is already registered at {address}.");
+
         public static SessionSetupError InvalidKeyMaterial(string why) =>
             new(SessionSetupErrorCode.InvalidKeyMaterial, why);
 

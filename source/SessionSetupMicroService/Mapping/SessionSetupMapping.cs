@@ -3,6 +3,7 @@ using SessionSetupMicroService.Entities;
 using SessionSetupMicroService.Enums;
 using SessionSetupMicroService.ExtensionMethods;
 using SessionSetupMicroService.Models;
+using System.Security.Cryptography;
 
 namespace SessionSetupMicroService.Mapping
 {
@@ -25,8 +26,8 @@ namespace SessionSetupMicroService.Mapping
                 DisplayName = request.DeviceName,
                 RegistrationId = registrationId.Value,
                 IdentityKey = request.IdentityKey.ToModel(),
-                SignedPreKey = request.SignedPreKey.ToMdodel(PreKeyKind.Curve),
-                LastResortKyberPreKey = request.LastResortKyberPreKey.ToMdodel(PreKeyKind.Kyber),
+                SignedPreKey = request.SignedPreKey.ToModel(PreKeyKind.Curve),
+                LastResortKyberPreKey = request.LastResortKyberPreKey.ToModel(PreKeyKind.Kyber),
                 OneTimePreKeys = request.OneTimePreKeys.Select(key => key.ToModel(PreKeyKind.Curve)).ToList(),
                 OneTimeKyberPreKeys = request.OneTimeKyberPreKeys.Select(key => key.ToOneTimeModel(PreKeyKind.Kyber)).ToList()
             };
@@ -92,7 +93,7 @@ namespace SessionSetupMicroService.Mapping
                 SignedPreKey = model.SignedPreKey.ToDto(),
                 OneTimePreKey = model.OneTimePreKey?.ToDto(),
                 KyberPreKey = model.KyberPreKey.ToDto(),
-                ServedLastResportKyberPreKey = model.ServedLastResortKyberPreKey
+                ServedLastResortKyberPreKey = model.ServedLastResortKyberPreKey
             }; 
         }
 
@@ -148,6 +149,46 @@ namespace SessionSetupMicroService.Mapping
             };            
         }
 
+        public static PublishPreKeys ToModel(this PublishPreKeysDto dto)
+        {
+            return new PublishPreKeys
+            {
+
+                SignedPreKey = dto.SignedPreKey?.ToModel(PreKeyKind.Curve),
+                LastResortKyberPreKey = dto.LastResortKyberPreKey?.ToModel(PreKeyKind.Kyber),
+                OneTimePreKeys = (dto.OneTimePreKeys ?? []).Select(key => key.ToModel(PreKeyKind.Curve)).ToList(),
+                OneTimeKyberPreKeys = (dto.OneTimeKyberPreKeys ?? []).Select(key => key.ToOneTimeModel(PreKeyKind.Kyber)).ToList()
+            };
+        }
+
+        public static PublicKeyDto ToDto(this KeyPair model)
+        {
+            return new PublicKeyDto
+            {
+                Algorithm = model.Algorithm,
+                Key = model.PublicKey
+            };
+        }
+
+        public static SignedPreKeyDto ToDto(this GeneratedSignedPreKey model)
+        {
+            return new SignedPreKeyDto
+            {
+                KeyId = model.KeyId,
+                PublicKey = model.KeyPair.ToDto(),
+                Signature = model.Signature
+            };
+        }
+
+        public static OneTimePreKeyDto ToDto(this GeneratedOneTimePreKey model)
+        {
+            return new OneTimePreKeyDto
+            {
+                KeyId = model.KeyId,
+                PublicKey = model.KeyPair.ToDto()
+            };
+        }
+
         private static PublicKey ToModel(this  PublicKeyDto dto)
         {
             return new PublicKey
@@ -157,7 +198,7 @@ namespace SessionSetupMicroService.Mapping
             };
         }
 
-        private static SignedPreKey ToMdodel(this SignedPreKeyDto dto, PreKeyKind kind)
+        private static SignedPreKey ToModel(this SignedPreKeyDto dto, PreKeyKind kind)
         {
             return new SignedPreKey
             {

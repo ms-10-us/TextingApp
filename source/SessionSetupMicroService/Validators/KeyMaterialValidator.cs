@@ -38,7 +38,7 @@ namespace SessionSetupMicroService.Validators
             return ValidateOneTimeBatches(registration.OneTimePreKeys, registration.OneTimeKyberPreKeys, maxKeysPerUpload);
         }
 
-        public static SessionSetupError? ValidatePublication(PreKeyPublication publication, int maxKeysPerUpload)
+        public static SessionSetupError? ValidatePublication(PublishPreKeys publication, int maxKeysPerUpload)
         {
             if (publication.IsEmpty)
             {

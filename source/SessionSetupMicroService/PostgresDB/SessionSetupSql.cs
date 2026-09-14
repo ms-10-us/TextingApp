@@ -20,6 +20,32 @@
         on conflict (account_id) do nothing
         """;
 
+        /// <summary>
+        /// Takes a row-level lock on the account, held until the transaction commits.
+        ///
+        /// This is what makes device linking safe. NextDeviceId is max(device_id) + 1, and under
+        /// ReadCommitted two concurrent links both read the same max, both compute the same id, and
+        /// the second insert dies on the primary key. Locking the account row first makes the second
+        /// link queue behind the first and read the committed maximum.
+        ///
+        /// EnsureAccount cannot do this job: `insert ... on conflict do nothing` takes no lock on a
+        /// row that already exists.
+        ///
+        /// Lock order across the service is account -> device -> prekeys. Registration, linking and
+        /// publishing all follow it, which is why none of them can deadlock against another.
+        /// </summary>
+        public const string LockAccount = """
+        select 1
+        from session_setup.accounts
+        where account_id = @account_id
+        for update
+        """;
+
+        /// <summary>
+        /// `on conflict do nothing` so a duplicate is reported by the row count rather than by an
+        /// exception. That keeps the Npgsql error code out of the orchestrator: the repository
+        /// returns false, and the use case decides that false means DeviceAlreadyRegistered.
+        /// </summary>
         public const string InsertDevice = """
         insert into session_setup.devices
             (account_id, device_id, display_name, registration_id,
@@ -27,6 +53,7 @@
         values
             (@account_id, @device_id, @display_name, @registration_id,
              @identity_algorithm, @identity_key, @credential_hash)
+        on conflict (account_id, device_id) do nothing
         """;
 
         public const string FindDevice = """
@@ -63,6 +90,9 @@
         where account_id = @account_id and device_id = @device_id
         """;
 
+        /// <summary>
+        /// Only correct while the account row is locked — see <see cref="LockAccount"/>.
+        /// </summary>
         public const string NextDeviceId = """
         select coalesce(max(device_id), 0) + 1
         from session_setup.devices

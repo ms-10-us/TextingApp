@@ -24,7 +24,7 @@ namespace SessionSetupMicroService.Repositories
             await command.ExecuteNonQueryAsync(ct);
         }
 
-        public async Task InsertAsync(
+        public async Task<bool> InsertAsync(
             ProtocolAddress address, 
             RegisterDeviceModel registration, 
             byte[] credentialHash, 
@@ -38,7 +38,7 @@ namespace SessionSetupMicroService.Repositories
                 .Bind("@identity_algorithm", registration.IdentityKey.Algorithm)
                 .Bind("@identity_key", registration.IdentityKey.Value)
                 .Bind("@credential_hash", credentialHash);
-            await command.ExecuteNonQueryAsync(ct);
+            return await command.ExecuteNonQueryAsync(ct) > 0;
         }
 
         public async Task<Device?> FindAsync(ProtocolAddress address, CancellationToken ct = default)
@@ -75,6 +75,31 @@ namespace SessionSetupMicroService.Repositories
             await using var command = await _scope.CreateCommandAsync(SessionSetupSql.DeviceExists, ct);
             BindAddress(command, address);
             return await command.ExecuteScalarAsync(ct) is true;
+        }
+
+        public async Task TouchAsync(ProtocolAddress address, CancellationToken ct = default)
+        {
+            await using var command = await _scope.CreateCommandAsync(SessionSetupSql.TouchDevice, ct);
+            BindAddress(command, address);
+            await command.ExecuteNonQueryAsync(ct);
+        }
+
+        public async Task<bool> LockAccountAsync(AccountId account, CancellationToken ct = default)
+        {
+            await using var command = await _scope.CreateCommandAsync(SessionSetupSql.LockAccount, ct);
+            command.Bind("@account_id", account.Value);
+
+           
+            return await command.ExecuteScalarAsync(ct) is not null;
+        }
+
+        public async Task<DeviceId> NextDeviceIdAsync(AccountId account, CancellationToken ct = default)
+        {
+            await using var command = await _scope.CreateCommandAsync(SessionSetupSql.NextDeviceId, ct);
+            command.Bind("@account_id", account.Value);
+
+            var next = await command.ExecuteScalarAsync(ct);
+            return new DeviceId(next is null ? DeviceId.Primary : Convert.ToInt32(next));
         }
 
         private static void BindAddress(DbCommand command, ProtocolAddress address) =>

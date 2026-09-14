@@ -18,7 +18,7 @@
 
         public bool IsFullStrength()
         {
-            return (OneTimePreKey != null || !ServedLastResortKyberPreKey);
+            return (OneTimePreKey != null && !ServedLastResortKyberPreKey);
         }
 
     }

@@ -5,6 +5,7 @@ using SessionSetupMicroService.OperationResult;
 using SessionSetupMicroService.Options;
 using SessionSetupMicroService.PostgresDB;
 using SessionSetupMicroService.Repositories;
+using SessionSetupMicroService.Validators;
 using System.Net;
 
 namespace SessionSetupMicroService.Orchestrators
@@ -104,6 +105,53 @@ namespace SessionSetupMicroService.Orchestrators
             }
 
             return Result<PreKeyInventory>.Success(await _preKeys.CountAsync(address, ct));
+        }
+
+        public async Task<Result<PreKeyInventory>> PublishAsync(
+            ProtocolAddress address, 
+            PublishPreKeys publication, 
+            CancellationToken ct = default)
+        {
+            if (!await _devices.ExistsAsync(address,ct))
+            {
+                return Result<PreKeyInventory>.Failure(SessionSetupError.DeviceNotFound(address));
+            }
+
+            if (KeyMaterialValidator.ValidatePublication(publication, _policyValue.MaxKeysPerUpload) is { } problem)
+            {
+                return Result<PreKeyInventory>.Failure(problem);
+            }
+
+            var existing = await _preKeys.CountAsync(address, ct);
+            if (existing.Curve + publication.OneTimePreKeys.Count() > _policyValue.MaxPoolSize ||
+                existing.Kyber + publication.OneTimeKyberPreKeys.Count() > _policyValue.MaxPoolSize)
+            {
+                return Result<PreKeyInventory>.Failure(SessionSetupError.PoolLimitExceeded(_policyValue.MaxPoolSize));
+            }
+
+            PreKeyInventory inventory = await _unitOfWork.ExecuteAsync(async token =>
+            {
+                if (publication.SignedPreKey is { } rotateCurve)
+                {
+                    await _preKeys.UpsertSignedPreKeyAsync(address, rotateCurve, token);
+                }
+
+                if (publication.LastResortKyberPreKey is { } rotatedKyber)
+                {
+                    await _preKeys.UpsertSignedPreKeyAsync(address, rotatedKyber, token);
+                }
+
+                await _preKeys.AddOneTimePreKeysAsync(address, publication.OneTimePreKeys, token);
+                await _preKeys.AddOneTimePreKeysAsync(address, publication.OneTimeKyberPreKeys, token);
+                await _devices.TouchAsync(address, token);
+
+                return await _preKeys.CountAsync(address, token);
+            }, ct);
+
+            _logger.LogInformation("{Address} published keys; pools now curve={Curve}, kyber={Kyber}",
+            address, inventory.Curve, inventory.Kyber);
+
+            return Result<PreKeyInventory>.Success(inventory);
         }
 
         private void WarnAboutDegradation(ProtocolAddress address, PreKeyBundle bundle)

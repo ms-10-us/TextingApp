@@ -8,5 +8,7 @@ namespace SessionSetupMicroService.Orchestrators
         Task<Result<PreKeyBundle>> TakeBundleAsync(ProtocolAddress protocolAddress, CancellationToken ct = default);
 
         Task<Result<PreKeyInventory>> GetInventoryAsync(ProtocolAddress address, CancellationToken ct = default);
+
+        Task<Result<PreKeyInventory>> PublishAsync(ProtocolAddress address, PublishPreKeys publication, CancellationToken ct = default);
     }
 }

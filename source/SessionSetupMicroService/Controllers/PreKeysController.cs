@@ -16,21 +16,23 @@ namespace SessionSetupMicroService.Controllers
     {
         private readonly IPreKeyOrchestrator _preKeyOrchestrator;
         private readonly IOptions<PreKeyPolicyOptions> _policy;
+        private readonly IDeviceAuthenticator _deviceAuthenticator;
         private readonly ILogger<PreKeysController> _logger;
 
         private readonly PreKeyPolicyOptions _policyValue;
+        public const string CredentialHeader = "X-Device-Credential";
 
         public PreKeysController(
             IPreKeyOrchestrator preKeyOrchestrator,
             IOptions<PreKeyPolicyOptions> policy,
+            IDeviceAuthenticator deviceAuthenticator,
             ILogger<PreKeysController> logger)
         {
             _preKeyOrchestrator = preKeyOrchestrator;
             _policy = policy;
             _policyValue = _policy.Value;
+            _deviceAuthenticator = deviceAuthenticator;
             _logger = logger;
-
-
         }
 
         [HttpGet("{address}")]
@@ -78,18 +80,32 @@ namespace SessionSetupMicroService.Controllers
             }
         }
 
+        [HttpPut("{address}")]
+        [ProducesResponseType<PreKeyInventoryResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+        public async Task<IActionResult> Publish(
+            [FromRoute] string address,
+            [FromBody] PublishPreKeysDto request,
+            [FromHeader(Name = CredentialHeader)] string? creadential,
+            CancellationToken ct)
+        {
+            if (!ProtocolAddress.TryParse(address, out var parsed))
+            {
+                return this.MalformedAddress(address);
+            }
 
+            var authentication = await _deviceAuthenticator.AuthenticateAsync(parsed, creadential, ct);
+            if (!authentication.IsSuccess)
+            {
+                return this.ToActionResult(authentication.Error!);
+            }
 
-
-
-
-
-
-
-
-
-
-
-
+            var result = await _preKeyOrchestrator.PublishAsync(parsed, request.ToModel(), ct);
+            return result.IsSuccess
+            ? Ok(result.Value!.ToResponse(_policyValue.LowWaterMark, _policyValue.MaxPoolSize))
+            : this.ToActionResult(result.Error!);
+        }
     }
 }

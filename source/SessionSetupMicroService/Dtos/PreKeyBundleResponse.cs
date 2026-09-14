@@ -14,6 +14,6 @@
 
         public required SignedPreKeyDto KyberPreKey { get; set; }
 
-        public required bool ServedLastResportKyberPreKey { get; set; }
+        public required bool ServedLastResortKyberPreKey { get; set; }
     }
 }

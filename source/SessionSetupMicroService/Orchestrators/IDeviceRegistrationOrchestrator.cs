@@ -10,5 +10,12 @@ namespace SessionSetupMicroService.Orchestrators
         Task<Result<Device>> GetAsync(ProtocolAddress address, CancellationToken ct = default);
 
         Task<Result<IEnumerable<Device>>> ListAsync(AccountId account, CancellationToken ct = default);
+
+        Task<Result<DeviceRegistrationResult>> LinkDeviceAsync(
+            AccountId account,
+            DeviceId vouchingDevice,
+            string? vouchingCredential,
+            RegisterDeviceModel registration,
+            CancellationToken ct = default);
     }
 }
