@@ -53,12 +53,12 @@ namespace SessionSetupMicroService.Orchestrators
 
             var address = new ProtocolAddress(AccountId.New(), new DeviceId(DeviceId.Primary));
             var credential = _credentials.Generate();
-            var creadentialHash = _credentials.Hash(credential);
+            var credentialHash = _credentials.Hash(credential);
 
             var device = await _unitOfWork.ExecuteAsync(async token =>
             {
                 await _devices.EnsureAccountAsync(address.Account, token);
-                await _devices.InsertAsync(address, registration, creadentialHash, token);
+                await _devices.InsertAsync(address, registration, credentialHash, token);
 
                 await _preKeys.UpsertSignedPreKeyAsync(address, registration.SignedPreKey, token);
                 await _preKeys.UpsertSignedPreKeyAsync(address, registration.LastResortKyberPreKey, token);
@@ -74,7 +74,7 @@ namespace SessionSetupMicroService.Orchestrators
                     IdentityKey = registration.IdentityKey,
                     RegisteredAt = now,
                     LastSeen = now
-                };                   
+                };
 
                 return device;
 
@@ -83,12 +83,7 @@ namespace SessionSetupMicroService.Orchestrators
             _logger.LogInformation("Registered {Address} with {CurveCount} curve and {KyberCount} Kyber one-time prekeys",
             address, registration.OneTimePreKeys.Count(), registration.OneTimeKyberPreKeys.Count());
 
-            if (registration.OneTimePreKeys.Count() < _policyValue.LowWaterMark)
-            {
-                _logger.LogWarning("{Address} registered with {Count} one-time prekeys, below the low-water mark of {LowWaterMark}; " +
-                "senders will start losing DH4 quickly",
-                address, registration.OneTimePreKeys.Count(), _policyValue.LowWaterMark);
-            }
+            WarnAboutLowPool(address, registration);
 
             Result<DeviceRegistrationResult> result = Result<DeviceRegistrationResult>
                 .Success(new DeviceRegistrationResult(device, credential));
@@ -119,7 +114,24 @@ namespace SessionSetupMicroService.Orchestrators
             return Result<IEnumerable<Device>>.Success(found);
         }
 
-        public async Task<Result<DeviceRegistrationResult>> LinkDeviceAsync(AccountId account, DeviceId vouchingDevice, string? vouchingCredential, RegisterDeviceModel registration, CancellationToken ct = default)
+        /// <summary>
+        /// Adds a device to an existing account.
+        ///
+        /// Three things have to hold, and the order matters:
+        ///
+        /// 1. The caller proves they already hold a device on this account, by presenting that
+        ///    device's credential. Without this the endpoint lets anyone attach their own device to
+        ///    your account and receive bundles addressed to you.
+        /// 2. The new device presents the SAME identity key as the account's existing devices.
+        /// 3. The account row is locked before the device id is computed, so two concurrent links
+        ///    cannot be handed the same id.
+        /// </summary>
+        public async Task<Result<DeviceRegistrationResult>> LinkDeviceAsync(
+            AccountId account,
+            DeviceId vouchingDevice,
+            string? vouchingCredential,
+            RegisterDeviceModel registration,
+            CancellationToken ct = default)
         {
             if (KeyMaterialValidator.ValidateRegistration(registration, _policyValue.MaxKeysPerUpload) is { } problem)
             {
@@ -128,7 +140,10 @@ namespace SessionSetupMicroService.Orchestrators
 
             var vouchingAddress = new ProtocolAddress(account, vouchingDevice);
 
-            Result<ProtocolAddress> authentication = await _authenticator.AuthenticateAsync(vouchingAddress, vouchingCredential, ct);
+            // Authenticated before the transaction opens: credentials do not change under us, and a
+            // failed attempt must not hold a lock on the account.
+            Result<ProtocolAddress> authentication =
+                await _authenticator.AuthenticateAsync(vouchingAddress, vouchingCredential, ct);
 
             if (!authentication.IsSuccess)
             {
@@ -141,13 +156,25 @@ namespace SessionSetupMicroService.Orchestrators
 
             Result<DeviceRegistrationResult> outcome = await _unitOfWork.ExecuteAsync(async token =>
             {
-                if (await _devices.LockAccountAsync(account, token))
+                // NOTE THE `!`. LockAccountAsync returns TRUE when the account exists and the row was
+                // locked. Dropping the negation inverts the whole method: every valid link is
+                // rejected as DeviceNotFound, and the only link that gets past this line is one for
+                // an account that does not exist.
+                if (!await _devices.LockAccountAsync(account, token))
                 {
                     return Result<DeviceRegistrationResult>.Failure(SessionSetupError.DeviceNotFound(account));
                 }
 
                 Device? vouching = await _devices.FindAsync(vouchingAddress, token);
                 if (vouching == null)
+                {
+                    return Result<DeviceRegistrationResult>.Failure(SessionSetupError.DeviceNotFound(vouchingAddress));
+                }
+
+                // The check that keeps one account to one identity key. Without it a vouching
+                // credential can introduce a device with an identity key of the attacker's choosing,
+                // and every sender who fetches that device's bundle talks to them instead.
+                if (IdentityKeyDiffers(vouching.IdentityKey, registration.IdentityKey))
                 {
                     return Result<DeviceRegistrationResult>.Failure(SessionSetupError.InvalidKeyMaterial(
                         "A linked device must present the same identity key as the account's existing devices."));
@@ -158,6 +185,7 @@ namespace SessionSetupMicroService.Orchestrators
 
                 if (!await _devices.InsertAsync(address, registration, credentialHash, token))
                 {
+                    // With the account lock held this is a genuine duplicate, not a lost race.
                     return Result<DeviceRegistrationResult>.Failure(SessionSetupError.DeviceAlreadyRegistered(address));
                 }
 
@@ -196,6 +224,14 @@ namespace SessionSetupMicroService.Orchestrators
 
             return outcome;
         }
+
+        /// <summary>
+        /// Plain comparison, not a constant-time one: these are public keys. Using FixedTimeEquals
+        /// here would suggest the value is secret, which it is not.
+        /// </summary>
+        private static bool IdentityKeyDiffers(PublicKey existing, PublicKey offered) =>
+            !string.Equals(existing.Algorithm, offered.Algorithm, StringComparison.Ordinal) ||
+            !existing.Value.SequenceEqual(offered.Value);
 
         private void WarnAboutLowPool(ProtocolAddress address, RegisterDeviceModel registration)
         {

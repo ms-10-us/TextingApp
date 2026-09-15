@@ -10,7 +10,7 @@ namespace SessionSetupMicroService.Repositories
 {
     public class DeviceRepository : IDeviceRepository
     {
-        public required PostgresConnectionScope _scope;
+        public readonly PostgresConnectionScope _scope;
 
         public DeviceRepository(PostgresConnectionScope scope)
         {

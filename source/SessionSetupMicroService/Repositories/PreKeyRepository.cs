@@ -10,7 +10,7 @@ namespace SessionSetupMicroService.Repositories
 {
     public class PreKeyRepository : IPreKeyRepository
     {
-        public required PostgresConnectionScope _scope;
+        public readonly PostgresConnectionScope _scope;
 
         public PreKeyRepository(PostgresConnectionScope scope)
         {
