@@ -58,3 +58,8 @@ nunit-*.xml
 
 #Ignore .vs/
 .vs/
+
+# Node & TestDriver
+node_modules/
+.testdriver/
+test-results/
